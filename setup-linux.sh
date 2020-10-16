@@ -4,24 +4,31 @@
 set -e
 
 #Some folders that i like to remove/create
-mkdir $HOME/Softwares
-mkdir $HOME/Projects
+arr_dirs_to_create=($HOME/Fonts $HOME/Softwares $HOME/Projects)
+arr_dirs_to_remove=($HOME/Public $HOME/Templates)
 
-rm -r $HOME/Public $HOME/Templates
+for dir in ${arr_dirs_to_create[@]}; do
+  if [ ! -d "$dir" ]; then
+    mkdir $dir
+  fi
+done;
 
-dir_downloads=$HOME/Downloads
-dir_softwares=$HOME/Softwares
-dir_projects=$HOME/Projects
-
-arr_snaps=(postman)
-arr_snaps_classic=(slack skype)
-
-arr_downloads=(
-"https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
-)
+for dir in ${arr_dirs_to_remove[@]}; do
+  if [ -d "$dir" ]; then
+    rmdir $dir
+  fi
+done;
 
 
-cd $dir_softwares
+downloads_dir=$HOME/Downloads
+softwares_dir=$HOME/Softwares
+projects_dir=$HOME/Projects
+fonts_dir=$HOME/Fonts
+
+snaps_arr=(postman)
+classic_snaps_arr=(slack skype vscode flutter)
+
+cd $softwares_dir
 
 echo 'Packages Update...this may take a while'
 sudo apt update
@@ -38,15 +45,39 @@ sudo apt-get install -y --no-install-recommends php7.4 php7.4-{bcmath,bz2,intl,g
 
 echo 'NVM installation'
 wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
-nvm install node -y
-nvm install-latest-npm
+#nvm install node -y
+#nvm install-latest-npm
 
 echo 'PostgreSQL installation'
 sudo apt install -y postgresql postgresql-contrib
 
 echo 'Snaps installation'
-snap install ${arr_snaps[@]}
-snap install --classic ${arr_snaps_classic[@]}
+snap install ${snaps_arr[@]}
+snap install --classic ${classic_snaps_arr[@]}
 
+echo 'Firefox Developer Edition installation'
+sh -c "$(wget "https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=pt-BR" -O firefox-developer.tar.bz2)"
+tar -jxvf  firefox-developer.tar.bz2 -C $softwares_dir
+mv $softwares_dir/firefox $softwares_dir/firefox-developer/
+sudo ln -sf $softwares_dir/firefox-developer/firefox /usr/bin/firefox-developer
+echo -e '[Desktop Entry]\n Version=59.0.3\n Encoding=UTF-8\n Name=Mozilla Firefox\n Comment=Navegador Web\n Exec='{$softwares_dir}/'firefox-developer/firefox\n Icon='{$softwares_dir}/'firefox-developer/browser/chrome/icons/default/default128.png\n Type=Application\n Categories=Network' | sudo tee /usr/share/applications/firefox-developer.desktop
+sudo chmod +x /usr/share/applications/firefox-developer.desktop
 
-wget -nv -c ${downloads[@]}
+echo 'Zsh && Oh My Zsh installation'
+sudo apt install -y zsh
+sh -c "$(wget https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)"
+chsh -s $(which zsh)
+
+echo 'PowerLevel10k (Oh My Zsh theme)'
+
+cd $fonts_dir;
+sh -c "$(wget https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf -O MesloLGS_NF_Regular.ttf) | cp MesloLGS_NF_Regular.ttf usr/share/fonts/"
+sh -c "$(wget https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf -O MesloLGS_NF_Bold.ttf)"
+sh -c "$(wget https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf -O MesloLGS_NF_Italic.ttf)"
+sh -c "$(wget https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf -O MesloLGS_NF_Bold_Italic.ttf)"
+sudo cp MesloLGS* /usr/share/fonts/
+
+cd $softwares_dir;
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+new_theme="powerlevel10k/powerlevel10k"
+sed -i.bak 's~\(ZSH_THEME="\)[^"]*\(".*\)~\1'${new_theme}'\2~' ~/.zshrc
